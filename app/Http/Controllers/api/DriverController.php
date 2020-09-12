@@ -7,7 +7,9 @@ use App\Driver;
 use App\Http\Controllers\Controller;
 use App\Route;
 use App\User;
+use App\Ride;
 use App\Vehicle;
+use App\UserBookingHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -124,13 +126,13 @@ class DriverController extends Controller
         $driver = Driver::where('email', '=', $email)->first();
         if (!$driver) {
             return response()->json([
-                'message' => 'incorrect email',
+                'message' => 'Email Dose Not Exist!',
                 'status' => false
             ], 403);
         }
         if (!Hash::check($password, $driver->password)) {
             return response()->json([
-                'message' => 'incorrect password',
+                'message' => 'Incorrect Password',
                 'status' => false
             ], 403);
         }
@@ -138,21 +140,23 @@ class DriverController extends Controller
         $request['name'] = $driver->name;
         $request['email'] = $driver->email;
         $request['phone'] = $driver->phone;
+        $request['approved'] = $driver->approved;
+        $request['vehicle_id'] = $driver->vehicle->id;
         $request['image'] = BASE_URL_DRIVER . $driver->image;
         $request['front_photo'] = BASE_URL_DRIVER . $driver->front_photo;
         $request['back_photo'] = BASE_URL_DRIVER . $driver->back_photo;
         $data = 'Bearer' . ' ' . $driver->createToken('MyApp')->accessToken;
         $response_array = array(
-            'status' => true, 'status_code' => 200, 'message' => 'Logged in successfully',
             'driver_id' => $request->driver_id,
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
+            'approved' => $request->approved,
+            'vehicle_id' => $driver->vehicle->id,
             'image' => $request->image,
-            'front_photo' => $request->front_photo,
-            'back_photo' => $request->back_photo,
             'data' => $data);
         return response()->json([
+            'status' => true, 'status_code' => 200, 'message' => 'Logged in successfully',
             'response' => $response_array
         ]);
 //
@@ -201,7 +205,6 @@ class DriverController extends Controller
             $request->all(),
             array(
                 'ending_point' => 'required',
-                'starting_point'=>'required',
                 'vehicle_id' => 'required',
                 's_latitude' => 'required',
                 's_longitude' => 'required',
@@ -214,23 +217,49 @@ class DriverController extends Controller
                 'message' => 'validation error',
                 'data' => $validator->errors()
             ], 422);
+
         $lat = $request->s_latitude;
         $lng = $request->s_longitude;
         $radius = 1000;
         $distance = $this->getDistance($lat, $lng);
         if (($driver->approved) && ($distance <= $radius)) {
-            $driver->rides()->create($request->all());
+            $driver->rides()->create([
+            'vehicle_id'=>$request->vehicle_id,
+            'ending_point'=>$request->ending_point,
+            'starting_point'=>'University Area',
+            's_latitude'=>$request->s_latitude,
+            's_longitude'=>$request->s_longitude,
+            'e_latitude'=>$request->e_latitude,
+            'e_longitude'=>$request->e_longitude,
+            ]);
+              $status=Ride::where('driver_id',$driver->id)->update(['status' => 'online']);
+
+              return response()->json([
+                'status' => true,
+                'message' => 'Ride Added & You Are Online Now!',
+            ]);
+           
         } else {
             return response()->json([
                 'status' => false,
-                'message' => 'you are not allowed to add '
+                'message' => 'You Are Not Allowed To Add '
             ]);
         }
-        return response()->json([
-            'status' => true,
-            'message' => 'ride added'
-        ]);
+        
     }
+
+    public function setDriverOffline(Driver $driver)
+    {
+        $status=Ride::where('driver_id',$driver->id)->first();
+        $resetVehicle=Vehicle::where('driver_id',$driver->id)->first();
+        $resetVehicle->update(['reserved_seats' => null , 'available_seats'=>null]);
+        $status->delete();
+                return response()->json([
+                    'status' => true,
+                    'message' => 'You Are Offline Now!',
+                ]);
+    }
+
     public function bookings(Vehicle $vehicle)
     {
         $bookings=Booking::where('vehicle_id',$vehicle->id)->where('status','pending')->get();
@@ -241,6 +270,102 @@ class DriverController extends Controller
         return response()->json([
             'status' => $status,
             'bookings' => $bookings
+        ]);
+    }
+
+    public function driver_request_approvel(Request $request)
+    {
+        $validator = Validator::make(
+        $request->all(),
+            array(
+                'status' => 'required',
+                'user_id' => 'required',
+                'vehicle_id' => 'required',
+                'drop_off_point'=>'required',
+                'e_latitude'=>'required',
+                'e_longitude'=>'required',
+            ));
+
+        $query=Vehicle::where('id',$request->vehicle_id)->first();
+            if($request->status=='approved'){
+        $status=Booking::where([
+            ['vehicle_id', '=', $request->vehicle_id],
+            ['user_id', '=', $request->user_id]
+        ])->update(['status' => $request->status]);
+        if($query->reserved_seats!=$query->no_of_seats){
+            $up_available_seats=$query->no_of_seats - $query->reserved_seats-1;
+            $query->update(['reserved_seats' => $query->reserved_seats+1 , 'available_seats'=>$up_available_seats]);
+        }
+        elseif($query->reserved_seats!=$query->no_of_seats){
+          return response()->json([
+            'status' => 'False',
+            ]);
+        }
+        
+        if($status){
+            return response()->json([
+                'status' => true,
+                'message'=>'Request Approved'
+            ]);
+        }
+            
+    }
+    elseif($request->status=='pickup'){
+       $status=Booking::where([
+            ['vehicle_id', '=', $request->vehicle_id],
+            ['user_id', '=', $request->user_id]
+        ])->update(['status' => $request->status]);
+            return response()->json([
+                'status' =>  'True',
+            ]);
+        } 
+        
+        elseif($request->status=='completed'){
+            $status=Booking::where([
+                 ['vehicle_id', '=', $request->vehicle_id],
+                 ['user_id', '=', $request->user_id]
+                 ])->first();
+              
+             //Save History
+              $history = new UserBookingHistory();
+              $history->vehicle_id = $request->vehicle_id;
+              $history->user_id = $request->user_id;
+              $history->status = $request->status;
+              $history->drop_off_point = $request->drop_off_point;
+              $history->e_latitude = $request->e_latitude;
+              $history->e_longitude = $request->e_longitude;
+              $history->save();
+            $status->delete();
+                 return response()->json([
+                     'status' =>  true,
+                 ]);
+             }
+           elseif($request->status=='canceled'){
+        $status = Booking::where([
+            ['vehicle_id', $request->vehicle_id],
+            ['user_id',  $request->user_id]
+        ])->first();
+        $up_available_seats=$query->reserved_seats+1;
+         $query->update(['reserved_seats' => $query->reserved_seats-1 , 'available_seats'=>$up_available_seats]);
+        $status->delete();
+            return response()->json([
+                'status' =>  true,
+            ]);
+        } 
+        
+    }
+
+    //Accepted Rides
+    public function accepted_rides(Vehicle $vehicle)
+    {
+        $acceptedRides=Booking::with('user')
+        ->where([
+            ['vehicle_id', $vehicle->id],
+            ['status','approved'],
+        ])->orWhere('status','pickup')->get();
+
+        return response()->json([
+           'data' => $acceptedRides
         ]);
     }
 

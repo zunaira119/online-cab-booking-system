@@ -21,4 +21,8 @@ class Vehicle extends Model
     {
         return $this->hasMany(Booking::class);
     }
+    public function rides()
+    {
+        return $this->hasOne(Ride::class);
+    }
 }

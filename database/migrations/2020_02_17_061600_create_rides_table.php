@@ -19,8 +19,11 @@ class CreateRidesTable extends Migration
             $table->unsignedBigInteger('vehicle_id');
             $table->string('starting_point');
             $table->string('ending_point');
-            $table->float('e_latitude',10,2);
-            $table->float('e_longitude',10,2);
+            $table->float('e_latitude',10,7);
+            $table->float('e_longitude',10,7);
+            $table->float('s_latitude',10,7);
+            $table->float('s_longitude',10,7);
+            $table->enum('status', ['offline', 'online'])->default('offline');
             $table->timestamps();
             $table->foreign('driver_id')->references('id')->on('drivers')->onDelete('cascade');
             $table->foreign('vehicle_id')->references('id')->on('vehicles')->onDelete('cascade');

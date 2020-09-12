@@ -22,6 +22,7 @@ class CreateUsersTable extends Migration
            $table->string('address')->nullable();
            $table->string('uni_card_number')->nullable();
            $table->string('firebase_id')->nullable();
+           $table->string('device_token')->nullable();
            $table->enum('type',['user','admin'])->default('user');
            $table->timestamps();
         });

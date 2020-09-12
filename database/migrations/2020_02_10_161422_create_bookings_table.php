@@ -18,7 +18,9 @@ class CreateBookingsTable extends Migration
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('vehicle_id');
             $table->string('drop_off_point');
-            $table->enum('status', ['pending', 'approved', 'canceled'])->default('pending');
+            $table->float('e_latitude',10,7);
+            $table->float('e_longitude',10,7);
+            $table->enum('status', ['pending', 'approved', 'canceled','pickup','completed'])->default('pending');
             $table->timestamps();
             $table->foreign('vehicle_id')->references('id')->on('vehicles')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

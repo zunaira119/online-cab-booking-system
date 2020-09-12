@@ -44,7 +44,7 @@ class UserController extends Controller
 //                $back_photo = $request->back_photo;
                 $destination = 'images/profile_images';
                 if ($request->hasFile('image')) {
-                    $filename = strtolower(
+                    $filename = url('/').'/'.$destination.'/'.strtolower(
                         pathinfo($image->getClientOriginalName(), PATHINFO_FILENAME)
                         . '-'
                         . uniqid()
@@ -84,7 +84,7 @@ class UserController extends Controller
 //                }
 
 //                $user = auth()->user();
-                $request['user_id'] = $user->id;
+                $request['id'] = $user->id;
                 $request['name'] = $user->name;
                 $request['email'] = $user->email;
                 $request['phone'] = $user->phone;
@@ -98,7 +98,7 @@ class UserController extends Controller
                 ], 403);
             }
 //            dd(BASE_URL.$user->image);
-            $response_array = array('status' => true, 'status_code' => 200, 'user_id' => $request->user_id,
+            $response_array = array('status' => true, 'status_code' => 200, 'id' => $request->id,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,'image' => $request->image,
@@ -133,7 +133,7 @@ class UserController extends Controller
                     'status' => false
                 ], 403);
             $user = auth()->user();
-            $request['user_id'] = $user->id;
+            $request['id'] = $user->id;
             $request['name'] = $user->name;
             $request['email'] = $user->email;
             $request['phone'] = $user->phone;
@@ -141,13 +141,13 @@ class UserController extends Controller
             $request['front_photo'] = BASE_URL . $user->front_photo;
             $request['back_photo'] = BASE_URL . $user->back_photo;
             $data = 'Bearer' . ' ' . $user->createToken('MyApp')->accessToken;
-            $response_array = array('user_id' => $request->user_id,
+            $response_array = array('id' => $request->user_id,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'image' => $request->image,
-                'front_photo' => $request->front_photo,
-                'back_photo' => $request->back_photo,
+                'front_photo' => BASE_URL . $request->front_photo,
+                'back_photo' => BASE_URL . $request->back_photo,
                 'status' => true, 'status_code' => 200, 'message' => 'Logged in successfully',
                 'data' => $data);
         }

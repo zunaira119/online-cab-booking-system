@@ -21,6 +21,7 @@ class CreateDriversTable extends Migration
             $table->string('phone')->nullable()->unique();
             $table->string('image')->nullable();
             $table->string('address')->nullable();
+            $table->string('device_token')->nullable();
             $table->string('front_photo')->nullable();
             $table->string('back_photo')->nullable();
             $table->boolean('approved')->default(false)->nullable();

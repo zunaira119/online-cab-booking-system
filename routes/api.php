@@ -24,7 +24,6 @@ Route::group(['namespace'=>'api'],function() {
     Route::post('book_ride/{vehicle}/{user}','BookingController@book_ride');
 
 
-
     //driver
     Route::post('driver_register', 'DriverController@driver_register');
     Route::post('driver_login', 'DriverController@driver_login');
@@ -40,6 +39,27 @@ Route::group(['namespace'=>'api'],function() {
 
     Route::post('available_rides','BookingController@available_rides');
     Route::get('available_seats/{vehicle}','BookingController@available_seats');
+
+    //booking Requests for driver
+    Route::get('booking_requests/{vehicle}','BookingController@booking_requests');
+
+    //booking Requests history
+    Route::get('user_ride_history/{vehicle}','UserController@user_ride_history');
+   // Route::get('user_ride_history/{vehicle}','UserController@user_ride_history');
+
+
+    //Set Driver Status To Offline
+    Route::get('setDriverOffline/{driver}','DriverController@setDriverOffline');
+
+    Route::get('carCategories','CategoryController@carCategories');
+
+    Route::post('driver_request_approvel','DriverController@driver_request_approvel');
+    Route::get('accepted_rides/{vehicle}','DriverController@accepted_rides');
+
+    Route::post('notification','NotificationController@notification');
+
+
+
 
 });
 //Route::group([
